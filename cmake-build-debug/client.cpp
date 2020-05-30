@@ -74,6 +74,15 @@ string sendMessageRPC(int & sock){
     return output;
 }
 
+string checkMessageRPC(int & sock){
+    string str = "rpc=checkmessage;";
+    char buffer[1024] = {0};
+    send (sock, str.c_str(), str.size() + 1, 0);
+    read(sock, buffer, 1024);
+    const char *output = buffer;
+    return output;
+}
+
 /**
  * Parses out string into a vector
  *
@@ -127,12 +136,25 @@ bool choose(int input, int & sock){
         case 1: {
             cout << "rpc 1" << endl;
             string verification = sendMessageRPC(sock);
-
+            vec = parseClient(verification);
+            if (vec[1] == "1"){
+                cout << "Message Sent Successfully" << endl;
+            } else if (vec[1] == "-1"){
+                cout << vec[3] << endl;
+            }
             break;
         }
-        case 2:
+        case 2: {
             cout << "rpc 2" << endl;
+            string message = checkMessageRPC(sock);
+            vec = parseClient(message);
+            if (vec[1] == "1"){
+                cout << "Inbox: " << vec[3] <<endl;
+            } else if (vec[1] == "-1"){
+                cout << vec[3] <<endl;
+            }
             break;
+        }
         case 3:{
             cout << "rpc 3" << endl;
             string datetimeOutput = dateTimeRPC(sock);
@@ -205,6 +227,7 @@ int main(int argc, char const *argv[]){
     sleep(3);
     bool cont = true;
     do{
+        cout << "" << endl;
         cout <<"What would you like to do?" << endl;
         cout <<"1 = Send Message" << endl;
         cout <<"2 = Check Message" << endl;

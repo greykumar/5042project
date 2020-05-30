@@ -16,6 +16,7 @@
 #include <vector>
 #include <iostream>
 #include <ctime>
+#include <fstream>
 
 
 //#define PORT 8080
@@ -107,9 +108,13 @@ private:
     int sock;
     int numUsers;
     vector<string> greetings;
-    string one;
-    string two;
-    string three;
+    string messageQueue;
+
+    int getRand(){
+        srand(time(NULL));
+        int num = rand() % greetings.size();
+        return num;
+    }
 
 public:
     serverInformation(){
@@ -134,6 +139,34 @@ public:
         return numUsers;
     }
 
+    void readGreetings(){
+        string line;
+        ifstream myfile;
+        myfile.open ("greetings.txt");
+        if (myfile.is_open())
+        {
+            while ( getline (myfile,line) )
+            {
+               greetings.push_back(line);
+            }
+            myfile.close();
+        }
+
+    }
+
+    bool setMessage(){
+        int num = getRand();
+        messageQueue = greetings[num];
+        return true;
+    }
+
+    string getMessage(){
+        if (messageQueue.empty()){
+
+            return "-1";
+        }
+        return messageQueue;
+    }
 
 };
 
@@ -185,6 +218,8 @@ public:
             perror("listen");
             exit(EXIT_FAILURE);
         }
+
+        serverInfo->readGreetings();
 
         return 0;
     }
@@ -268,19 +303,39 @@ public:
         string newdt = string (dt);
         newdt.push_back(';');
 
-        string str = (string)"status=datetime;message=" + newdt + ";";
+        string str = (string)"status=1;message=" + newdt + ";";
         return str;
     }
 
-//    static string sendMessage(){
-//
-//    }
+    static string sendMessage(serverInformation *sharedData){
+        bool sent = sharedData->setMessage();
+        cout <<"Sending message"<< endl;
+        string str;
+        if (sent){
+            str = "status=1;;";
+        } else{
+            str = "status=-1;error=Message Not Sent;";
+        }
+        return str;
+    }
+
+    static string checkMessage(serverInformation *sharedData){
+        string message = sharedData->getMessage();
+        string str;
+        if (message == "-1"){
+            str = "status=-1;error=No Messages;;";
+        } else {
+            message.push_back(';');
+            str = "status=1;message=" + message + ";";
+        }
+        return str;
+    }
 
     static void *rpcFunc(void *arg){
         int new_socket;
         int valread;
         char buffer[1024] = {0};
-
+        srand(time(0));
         int clientNum = rand() % 100 + 1;
 
         serverInformation *pSharedData = (serverInformation *)arg;
@@ -338,6 +393,12 @@ public:
                 } else if (strcmp(pszRpcValue, "datetime") == 0){
                     string message = datetime();
                     send(new_socket, message.c_str(), message.size()-1, 0);
+                } else if (strcmp(pszRpcValue, "sendmessage") == 0) {
+                    string message = sendMessage(pSharedData);
+                    send(new_socket, message.c_str(), message.size() - 1, 0);
+                } else if (strcmp(pszRpcValue, "checkmessage") == 0) {
+                    string message = checkMessage(pSharedData);
+                    send(new_socket, message.c_str(), message.size() - 1, 0);
                 }
             }
 
