@@ -108,7 +108,9 @@ private:
     int sock;
     int numUsers;
     vector<string> greetings;
+    vector<string> facts;
     string messageQueue;
+    string currentFact;
 
     int getRand(){
         srand(time(NULL));
@@ -151,10 +153,24 @@ public:
             }
             myfile.close();
         }
+    }
 
+    void readFacts(){
+        string line;
+        ifstream myfile;
+        myfile.open ("facts.txt");
+        if (myfile.is_open())
+        {
+            while ( getline (myfile,line) )
+            {
+                facts.push_back(line);
+            }
+            myfile.close();
+        }
     }
 
     bool setMessage(){
+
         int num = getRand();
         messageQueue = greetings[num];
         return true;
@@ -166,6 +182,20 @@ public:
             return "-1";
         }
         return messageQueue;
+    }
+
+    void setFact(){
+        int num = getRand();
+        currentFact = facts[num];
+
+    }
+
+    string getFact(){
+        if (currentFact.empty()){
+
+            return "-1";
+        }
+        return currentFact;
     }
 
 };
@@ -220,6 +250,7 @@ public:
         }
 
         serverInfo->readGreetings();
+        serverInfo->readFacts();
 
         return 0;
     }
@@ -331,6 +362,21 @@ public:
         return str;
     }
 
+    static string getFact(serverInformation *sharedData){
+
+        sharedData->setFact();
+        string message = sharedData->getFact();
+        string str;
+        if (message == "-1"){
+            str = "status=-1;error=No Fact Available;;";
+        } else {
+            message.push_back(';');
+            str = "status=1;message=" + message + ";";
+        }
+        return str;
+
+    }
+
     static void *rpcFunc(void *arg){
         int new_socket;
         int valread;
@@ -398,6 +444,10 @@ public:
                     send(new_socket, message.c_str(), message.size() - 1, 0);
                 } else if (strcmp(pszRpcValue, "checkmessage") == 0) {
                     string message = checkMessage(pSharedData);
+                    send(new_socket, message.c_str(), message.size() - 1, 0);
+                } else if (strcmp(pszRpcValue, "getfact") == 0) {
+
+                    string message = getFact(pSharedData);
                     send(new_socket, message.c_str(), message.size() - 1, 0);
                 }
             }

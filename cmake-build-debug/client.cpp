@@ -83,6 +83,15 @@ string checkMessageRPC(int & sock){
     return output;
 }
 
+string getFactRPC (int & sock){
+    string str = "rpc=getfact;";
+    char buffer[1024] = {0};
+    send (sock, str.c_str(), str.size() + 1, 0);
+    read(sock, buffer, 1024);
+    const char *output = buffer;
+    return output;
+}
+
 /**
  * Parses out string into a vector
  *
@@ -162,9 +171,17 @@ bool choose(int input, int & sock){
             cout << "The local date and time is: " << vec[3] << endl;
             break;
         }
-        case 4:
+        case 4: {
             cout << "rpc 4" << endl;
+            string factOutput = getFactRPC(sock);
+            vec = parseClient(factOutput);
+            if (vec[1] == "1"){
+                cout << "Did you know... " << vec[3] <<endl;
+            } else if (vec[1] == "-1"){
+                cout << vec[3] <<endl;
+            }
             break;
+        }
         case 5:
             //call DisconnectRPC
             string disconnectOutput = disconnectRPC(sock);
@@ -230,10 +247,10 @@ int main(int argc, char const *argv[]){
         cout << "" << endl;
         cout <<"What would you like to do?" << endl;
         cout <<"1 = Send Message" << endl;
-        cout <<"2 = Check Message" << endl;
+        cout <<"2 = Check Current Message" << endl;
         cout <<"3 = Check the date and time" << endl;
-        cout <<"4 = rpc 3" << endl;
-        cout <<"5 = diconnect" << endl;
+        cout <<"4 = Fun Fact" << endl;
+        cout <<"5 = Diconnect" << endl;
         int input;
         cin >> input;
 
