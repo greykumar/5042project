@@ -143,7 +143,7 @@ bool choose(int input, int & sock){
     vector<string> vec;
     switch(input){
         case 1: {
-            cout << "rpc 1" << endl;
+            cout << "" << endl;
             string verification = sendMessageRPC(sock);
             vec = parseClient(verification);
             if (vec[1] == "1"){
@@ -154,7 +154,7 @@ bool choose(int input, int & sock){
             break;
         }
         case 2: {
-            cout << "rpc 2" << endl;
+            cout << "" << endl;
             string message = checkMessageRPC(sock);
             vec = parseClient(message);
             if (vec[1] == "1"){
@@ -165,14 +165,14 @@ bool choose(int input, int & sock){
             break;
         }
         case 3:{
-            cout << "rpc 3" << endl;
+            cout << "" << endl;
             string datetimeOutput = dateTimeRPC(sock);
             vec = parseClient(datetimeOutput);
             cout << "The local date and time is: " << vec[3] << endl;
             break;
         }
         case 4: {
-            cout << "rpc 4" << endl;
+            cout << "" << endl;
             string factOutput = getFactRPC(sock);
             vec = parseClient(factOutput);
             if (vec[1] == "1"){
@@ -184,6 +184,7 @@ bool choose(int input, int & sock){
         }
         case 5:
             //call DisconnectRPC
+            cout << "" << endl;
             string disconnectOutput = disconnectRPC(sock);
             vec = parseClient(disconnectOutput);
             if (vec[0] == "status"){
