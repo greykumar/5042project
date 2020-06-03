@@ -251,7 +251,7 @@ int main(int argc, char const *argv[]){
         cout <<"2 = Check Current Message" << endl;
         cout <<"3 = Check the date and time" << endl;
         cout <<"4 = Fun Fact" << endl;
-        cout <<"5 = Diconnect" << endl;
+        cout <<"5 = Disconnect" << endl;
         int input;
         cin >> input;
 

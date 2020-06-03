@@ -17,6 +17,7 @@
 #include <iostream>
 #include <ctime>
 #include <fstream>
+#include <pthread.h>
 
 
 //#define PORT 8080
@@ -106,7 +107,7 @@ public:
 class serverInformation{
 private:
     int sock;
-    pthread_mutex_t lock;
+    pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     volatile int numUsers;
     vector<string> greetings;
     vector<string> facts;
@@ -142,8 +143,11 @@ public:
         return numUsers;
     }
     int userDisconnected(){
+        //lock
         if (numUsers > 0) {
+            pthread_mutex_lock(&lock);
             numUsers--;
+            pthread_mutex_unlock(&lock);
         }
         return numUsers;
     }
@@ -177,7 +181,6 @@ public:
     }
 
     bool setMessage(){
-
         int num = getRand();
         messageQueue = greetings[num];
         return true;
@@ -230,7 +233,6 @@ public:
 
 
 class DoRpcs{
-
 public:
     ~DoRpcs()= default;
 
@@ -533,7 +535,6 @@ int main(int argc, char const *argv[]){
     }else {
          nPort = atoi((char const  *)argv[1]);
     }
-
   //  int nPort = atoi((char const  *)argv[1]);
 
     Server *serverObj = new Server(nPort);
