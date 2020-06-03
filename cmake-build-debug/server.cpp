@@ -1,12 +1,9 @@
 //
-// Created by greyk on 4/26/2020.
-//
-//#define NDEBUG
+// Created by Grey Kumar, Vanessa Duke, and Jason Limfueco on 4/26/2020.//
 
 #include <cstdio>
 // Server side C/C++ program to demonstrate Socket programming
 #include <unistd.h>
-#include <cstdio>
 #include <sys/socket.h>
 #include <cstdlib>
 #include <netinet/in.h>
