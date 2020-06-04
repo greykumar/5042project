@@ -1,8 +1,8 @@
 //
-// Created by Grey Kumar, Vanessa Duke, and Jason Limfueco on 4/26/2020.//
+// Created by Grey Kumar, Vanessa Duke, and Jason Limfueco on 4/26/2020.
+// Server side C/C++ program to demonstrate Socket programming
 
 #include <cstdio>
-// Server side C/C++ program to demonstrate Socket programming
 #include <unistd.h>
 #include <sys/socket.h>
 #include <cstdlib>
@@ -15,9 +15,6 @@
 #include <ctime>
 #include <fstream>
 #include <pthread.h>
-
-
-//#define PORT 8080
 #define PORT 12111
 using namespace std;
 
@@ -101,16 +98,28 @@ public:
 
 };
 
+
+/**
+ * Global object for the server
+ * Accessed by all clients
+ * manages number of users and file handling
+ *
+ */
 class serverInformation{
 private:
     int sock;
     pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     volatile int numUsers;
-    vector<string> greetings;
-    vector<string> facts;
-    string messageQueue;
-    string currentFact;
+    vector<string> greetings;   //holds the greetings read from file
+    vector<string> facts;   //holes the facts read from file
+    string messageQueue;    //current message in the queue/Inbox
+    string currentFact;     //current fact in the queue
 
+    /**
+     * generate ranodm number
+     *
+     * @return rand number
+     */
     int getRand(){
         srand(time(NULL));
         int num = rand() % greetings.size();
@@ -123,22 +132,47 @@ public:
         numUsers = 0;
 
     }
+    /**
+     * assign current socket from client recently connected
+     *
+     * @param s the socket
+     */
     void assignSocket(int s){
         this->sock = s;
     }
+
+    /**
+     * returns the socket for the current client
+     *
+     * @return the socket
+     */
     int getSocket(){
         return sock;
     }
 
+    /**
+     * Increases the number of users when a new client is connected
+     *
+     */
     void addNewUser(){
         pthread_mutex_lock(&lock);
         numUsers++;
         pthread_mutex_unlock(&lock);
     }
 
+    /**
+     *
+     * @return the number of connected users
+     */
     int getUserNumber(){
         return numUsers;
     }
+
+    /**
+     * Decreases number of users when a client disconnects
+     *
+     * @return the number of users
+     */
     int userDisconnected(){
         //lock
         if (numUsers > 0) {
@@ -149,6 +183,10 @@ public:
         return numUsers;
     }
 
+    /**
+     * reads the greetings file
+     *
+     */
     void readGreetings(){
         string line;
         ifstream myfile;
@@ -157,12 +195,16 @@ public:
         {
             while ( getline (myfile,line) )
             {
-               greetings.push_back(line);
+               greetings.push_back(line);   //add to greetings vector
             }
             myfile.close();
         }
     }
 
+    /**
+     * reads the facts file
+     *
+     */
     void readFacts(){
         string line;
         ifstream myfile;
@@ -171,18 +213,27 @@ public:
         {
             while ( getline (myfile,line) )
             {
-                facts.push_back(line);
+                facts.push_back(line);  //add to facts vector
             }
             myfile.close();
         }
     }
 
+    /**
+     * gets a random number then sets the message in the inbox to the rand index in greetings
+     *
+     * @return true if message is set
+     */
     bool setMessage(){
         int num = getRand();
         messageQueue = greetings[num];
         return true;
     }
 
+    /**
+     *
+     * @return the current message in the inbox
+     */
     string getMessage(){
         if (messageQueue.empty()){
 
@@ -191,12 +242,20 @@ public:
         return messageQueue;
     }
 
+    /**
+     * gets a random number then sets the fact based on the rand index in facts vector
+     *
+     */
     void setFact(){
         int num = getRand();
         currentFact = facts[num];
 
     }
 
+    /**
+     *
+     * @return the current fact
+     */
     string getFact(){
         if (currentFact.empty()){
 
@@ -207,7 +266,10 @@ public:
 
 };
 
-
+/**
+ * Local object that stores information for each client connected
+ *
+ */
 class clientInformation{
 private:
     string username;
@@ -215,20 +277,37 @@ private:
 public:
     clientInformation(){}
 
+    /**
+     *assigns sock param to socketNum
+     *
+     * @param s the socket for the client
+     */
     void assignSocket(int s){
         this->socketNum = s;
     }
 
+    /**
+     * assigns user param to username
+     *
+     * @param user the username of the client
+     */
     void assignUsername(string user){
         this->username = user;
     }
 
+    /**
+     *
+     * @return the username of the client
+     */
     string getUsername(){
         return username;
     }
 };
 
-
+/**
+ * Class to perform each of the RPC functions
+ *
+ */
 class DoRpcs{
 public:
     ~DoRpcs()= default;
@@ -236,14 +315,15 @@ public:
     /**
     * server side connect Rpc
     * checks to see if username = abc and password = 123
-    * @param username
-    *  @param password
-    * @return
+    * @param username the username of the client
+    *  @param password the password of the client
+    * @return 1 if valid credentials
     */
     int connect (string username, string password, serverInformation *sharedData){
         string passTest = "123";
         int value = 1;
         cout << "Connecting..." << endl;
+        //check if password is valid
         if (password.length() == passTest.length()){
             for( int i = 0; i < passTest.length(); i++){
                 if (password.at(i) != passTest.at(i)){
@@ -275,10 +355,15 @@ public:
     static string disconnect(serverInformation *sharedData){
         string str = "status=1;error= ;";
         cout<<"Disconnecting.." << endl;
-        sharedData->userDisconnected();
+        sharedData->userDisconnected(); //decrease number of users
         return str;
     }
 
+    /**
+     * calculates the current date and time from the system
+     *
+     * @return the date and time in a string format
+     */
     static string datetime(){
         // current date/time based on current system
         time_t now = time(0);
@@ -292,8 +377,14 @@ public:
         return str;
     }
 
+    /**
+     * sends a message to the inbox, calls global setMessage function
+     *
+     * @param sharedData the global serverInformation object
+     * @return message in string format
+     */
     static string sendMessage(serverInformation *sharedData){
-        bool sent = sharedData->setMessage();
+        bool sent = sharedData->setMessage();   //set message in inbox
         cout <<"New Message in Inbox"<< endl;
         string str;
         if (sent){
@@ -304,8 +395,14 @@ public:
         return str;
     }
 
+    /**
+     * checks the current message in the inbox
+     *
+     * @param sharedData the global serverInformation Object
+     * @return message in string format
+     */
     static string checkMessage(serverInformation *sharedData){
-        string message = sharedData->getMessage();
+        string message = sharedData->getMessage();  //get message from inbox
         string str;
         if (message == "-1"){
             str = "status=-1;error=No Messages;;";
@@ -316,10 +413,15 @@ public:
         return str;
     }
 
+    /**
+     * gets the current fact from the global serverInfo object
+     *
+     * @param sharedData the global serverInformation object
+     * @return message in string format
+     */
     static string getFact(serverInformation *sharedData){
-
-        sharedData->setFact();
-        string message = sharedData->getFact();
+        sharedData->setFact();  //set fact
+        string message = sharedData->getFact();     //get fact
         string str;
         if (message == "-1"){
             str = "status=-1;error=No Fact Available;;";
@@ -334,7 +436,10 @@ public:
 };
 
 
-
+/**
+ * Class for the server, initializes the server and creates the threads
+ *
+ */
 class Server{
 private:
     int server_fd;
@@ -342,7 +447,7 @@ private:
     int addrlen = sizeof(address);
     int m_port;
     int totalConn;
-    serverInformation *serverInfo;
+    serverInformation *serverInfo;  //global server object
 
 public:
     Server(int nPort){
@@ -352,6 +457,11 @@ public:
 
     ~Server(){}
 
+    /**
+     * starts the server
+     *
+     * @return 0
+     */
     int startServer(){
         int opt = 1;
         serverInfo = new serverInformation();
@@ -392,6 +502,11 @@ public:
 
     // Socket returned from function is going to be specific to the client that is connecting to us
 
+    /**
+     * Accepts a new connection from an incoming client
+     *
+     * @return the socket number for the client
+     */
     int acceptNewConnection(){
         int new_socket;
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address,(socklen_t*)&addrlen)) < 0){
@@ -401,13 +516,18 @@ public:
         return new_socket;
     }
 
+    /**
+     * Create a new thread for each incoming client connection
+     *
+     * @return 0
+     */
     int threadFunc(){
         auto *threads = new pthread_t[totalConn];
         int i = 0;
         while (true){
-            int newSocket = acceptNewConnection();
+            int newSocket = acceptNewConnection();   //get incoming connection
             serverInfo->assignSocket(newSocket);
-            pthread_create(&threads[i], NULL, rpcFunc, (void *)serverInfo);
+            pthread_create(&threads[i], NULL, rpcFunc, (void *)serverInfo);     //create thread for connection
             i = (i+1) % totalConn;
         }
         delete [] threads;
@@ -415,13 +535,26 @@ public:
         return 0;
     }
 
+    /**
+     * prints the incoming rpc call from a client
+     *
+     * @param name the username
+     * @param buffer the rpc call message
+     * @return message in string format
+     */
     static string incomingMessage(string name, char buffer[1024]){
-       // cout << "Received RPC call from client number: "<< name << buffer << endl;      //print buffer
+        //print buffer
         string str = "Received RPC call from client " + name + ": " + buffer + "\n";
         return str;
     }
 
 
+    /**
+     * manages rpc calls from a connected client
+     *
+     * @param arg the global server object
+     * @return NULL
+     */
     static void *rpcFunc(void *arg){
         int new_socket;
         int valread;
@@ -431,12 +564,12 @@ public:
         serverInformation *pSharedData = (serverInformation *)arg;
 
         clientInformation clientInfo;
-        new_socket = pSharedData->getSocket();
+        new_socket = pSharedData->getSocket();  //get socket number for client
 
         DoRpcs doRpcs;
 
+        //read input from client
         while ((valread = read(new_socket, buffer, 1024)) != 0) {
-
             //parse string
             auto *pRawKey = new RawKeyValueString((char *)buffer);
             KeyValue rpcKeyValue;
@@ -483,27 +616,37 @@ public:
                     send(new_socket, str.c_str(), str.size()+1, 0);
 
                 } else if (strcmp(pszRpcValue, "disconnect") == 0){
+                    //print incoming rpc call
                     cout << incomingMessage(clientInfo.getUsername(), buffer);
                     string message = DoRpcs::disconnect(pSharedData);
+                    //send message back to client
                     send(new_socket, message.c_str(), message.size()+1, 0);
                     cout <<"Client "<< clientInfo.getUsername() <<" disconnected. " << "Number of users: " <<
                     pSharedData->getUserNumber() <<endl;
                     cout << " " << endl;
                 } else if (strcmp(pszRpcValue, "datetime") == 0){
+                    //print incoming rpc call
                     cout << incomingMessage(clientInfo.getUsername(), buffer);
                     string message = DoRpcs::datetime();
+                    //send message back to client
                     send(new_socket, message.c_str(), message.size()-1, 0);
                 } else if (strcmp(pszRpcValue, "sendmessage") == 0) {
+                    //print incoming rpc call
                     cout << incomingMessage(clientInfo.getUsername(), buffer);
                     string message = DoRpcs::sendMessage(pSharedData);
+                    //send message back to client
                     send(new_socket, message.c_str(), message.size() - 1, 0);
                 } else if (strcmp(pszRpcValue, "checkmessage") == 0) {
+                    //print incoming rpc call
                     cout << incomingMessage(clientInfo.getUsername(), buffer);
                     string message = DoRpcs::checkMessage(pSharedData);
+                    //send message back to client
                     send(new_socket, message.c_str(), message.size() - 1, 0);
                 } else if (strcmp(pszRpcValue, "getfact") == 0) {
+                    //print incoming rpc call
                     cout << incomingMessage(clientInfo.getUsername(), buffer);
                     string message = DoRpcs::getFact(pSharedData);
+                    //send message back to client
                     send(new_socket, message.c_str(), message.size() - 1, 0);
                 }
             }
@@ -514,6 +657,11 @@ public:
     }
 
 
+    /**
+     * closes the server
+     *
+     * @return 0
+     */
     int closeServer(){
         return 0;
     }
@@ -524,7 +672,6 @@ public:
 
 int main(int argc, char const *argv[]){
     //server setup
-    int server_fd, new_socket = 0;
     int nPort;
 
     if (argc < 3){
@@ -532,7 +679,6 @@ int main(int argc, char const *argv[]){
     }else {
          nPort = atoi((char const  *)argv[1]);
     }
-  //  int nPort = atoi((char const  *)argv[1]);
 
     Server *serverObj = new Server(nPort);
 
@@ -540,9 +686,8 @@ int main(int argc, char const *argv[]){
     //wait for new socket
     cout <<"Waiting" << endl;
     serverObj->threadFunc();
-    //int count = 0;
 
-    //while true to constantly read rpcs from the client
+    delete serverObj;
 
     return 0;
 }
